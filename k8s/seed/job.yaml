@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mongo-seed
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: seed
+          image: mongo:7
+          env:
+            - name: CUSTOMERS
+              value: "50"
+          command:
+            - sh
+            - -c
+            - |
+              until mongosh --quiet --host mongo --eval 'db.adminCommand({ping:1}).ok' >/dev/null 2>&1; do
+                echo "waiting for mongo..."; sleep 2
+              done
+              mongosh --quiet mongodb://mongo:27017/reportsdb --file /seed/seed.js
+          volumeMounts:
+            - name: script
+              mountPath: /seed
+      volumes:
+        - name: script
+          configMap:
+            name: mongo-seed-script

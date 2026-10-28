@@ -1,0 +1,143 @@
+# ------------------------------------------------------------------ reports-gateway: endpoints 1 and 4 (2 replicas)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reports-gateway
+  labels: { app: reports-gateway }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: reports-gateway }
+  template:
+    metadata:
+      labels: { app: reports-gateway }
+    spec:
+      containers:
+        - name: app
+          image: reports-lab/reports-gateway:1.0.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef: { name: lab-config }
+          ports:
+            - containerPort: 8080
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8080 }
+            periodSeconds: 3
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8080 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8080 }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 640Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reports-gateway
+spec:
+  type: NodePort
+  selector: { app: reports-gateway }
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080
+---
+# ------------------------------------------------------------------ reports-service: endpoint 2 (2 replicas)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reports-service
+  labels: { app: reports-service }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: reports-service }
+  template:
+    metadata:
+      labels: { app: reports-service }
+    spec:
+      containers:
+        - name: app
+          image: reports-lab/reports-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef: { name: lab-config }
+          ports:
+            - containerPort: 8080
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8080 }
+            periodSeconds: 3
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8080 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8080 }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 640Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reports-service
+spec:
+  type: NodePort
+  selector: { app: reports-service }
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30081
+---
+# ------------------------------------------------------------------ campaign-offers-service: endpoint 3 (1 replica)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: campaign-offers-service
+  labels: { app: campaign-offers-service }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: campaign-offers-service }
+  template:
+    metadata:
+      labels: { app: campaign-offers-service }
+    spec:
+      containers:
+        - name: app
+          image: reports-lab/campaign-offers-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef: { name: lab-config }
+          ports:
+            - containerPort: 8080
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8080 }
+            periodSeconds: 3
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8080 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8080 }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 640Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: campaign-offers-service
+spec:
+  type: NodePort
+  selector: { app: campaign-offers-service }
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30082

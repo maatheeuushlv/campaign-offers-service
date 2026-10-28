@@ -1,0 +1,25 @@
+server:
+  port: 8080
+  shutdown: graceful
+
+spring:
+  application:
+    name: reports-service
+  mongodb:
+    uri: ${MONGO_URI:mongodb://localhost:27017/reportsdb}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+lab:
+  jwt:
+    secret: ${JWT_SECRET:lab-secret-lab-secret-lab-secret-123456}
+    cnpj-claim: ${JWT_CNPJ_CLAIM:cnpj}
+  zone: ${APP_ZONE:America/Sao_Paulo}

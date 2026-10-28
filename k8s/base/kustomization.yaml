@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: reports-lab
+
+resources:
+  - infra.yaml
+  - apps.yaml
+
+configMapGenerator:
+  - name: lab-config
+    options:
+      disableNameSuffixHash: true
+    literals:
+      - MONGO_URI=mongodb://mongo:27017/reportsdb
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REPORTS_SERVICE_URL=http://reports-service:8080
+      - CAMPAIGN_SERVICE_URL=http://campaign-offers-service:8080
+      # lab token secret (HS256, >= 32 chars) and the name of the claim that carries the CNPJ
+      - JWT_SECRET=lab-secret-lab-secret-lab-secret-123456
+      - JWT_CNPJ_CLAIM=cnpj
+      - APP_ZONE=America/Sao_Paulo
+      - CACHE_TTL_HOURS=12
+      # /dev/* endpoints (token minting, Mongo truth, reset) - LAB ONLY
+      - DEV_ENDPOINTS=true
+      # Artificial latency, identical in both scenarios, so the race window is wide enough to hit on a laptop.
+      #   SIM_WRITE_DELAY_MS: gateway, between "decide" and "commit"  (slow Mongo / GC pause / network)
+      #   SIM_LOAD_DELAY_MS : campaign-offers-service, between "read Mongo" and "fill Redis"
+      # Set both to 0 to see how rare (and therefore nasty) the bug is with realistic timings.
+      - SIM_WRITE_DELAY_MS=300
+      - SIM_LOAD_DELAY_MS=60

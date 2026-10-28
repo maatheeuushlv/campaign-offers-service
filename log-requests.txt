@@ -1,0 +1,48 @@
+PS C:\Users\mathe\_dev\reports-lab> .\scripts\demo.ps1
+Customer user002  CNPJ 10000001000190 10000002000134 10000003000189 10000004000123 10000005000178 10000006000112 10000007000167 10000008000101 10000009000156 10000010000180 10000011000125 10000012000170 10000013000114 10000014000169 10000015000103 10000016000158 10000017000100 10000018000147 10000019000191 10000020000116 10000021000160 10000022000105 10000023000150 10000024000102 10000025000149 10000026000193 10000027000138 10000028000182 10000029000127 10000030000151 10000031000104 10000032000140 10000033000195 10000034000130 10000035000184 10000036000129 10000037000173 10000038000118 10000039000162 10000040000197 10000041000131 10000042000186 10000043000120 10000044000175 10000045000110 10000046000164 10000047000109 10000048000153 10000049000106 10000050000122
+
+--- ENDPOINT 2  GET /reports/logon/{logon}/document/{cnpj}  (direct on :8081, no cache: always Mongo)
+{
+    "reports":  [
+
+                ]
+}
+
+--- ENDPOINT 3  GET /campaign-offers/logon/{logon}/document/{cnpj}  (direct on :8082, cached 12h in Redis, cart-aware)
+{
+    "recommendations":  [
+
+                        ]
+}
+
+--- ENDPOINT 1  GET /reports/logon/{logon}/preferences  (cart 1 = recommendations, cart 2 = features)
+{
+    "reports":  [
+
+                ]
+}
+POST insert -> 204  X-Reason=OFFER_NOT_ELIGIBLE  pod=reports-gateway-7554bfd484-2sgpw
+
+--- ENDPOINT 1 after insert: the feature moved from recommendations to features (preSelected=true)
+{
+    "reports":  [
+
+                ]
+}
+POST insert -> 204  X-Reason=OFFER_NOT_ELIGIBLE  pod=reports-gateway-7554bfd484-2sgpw
+POST remove -> 204  X-Reason=NOT_IN_CART  pod=reports-gateway-7554bfd484-2sgpw
+
+--- ENDPOINT 1 after remove: back to recommendations (still valid today)
+{
+    "reports":  [
+
+                ]
+}
+
+Mongo truth (bypasses every cache):
+{
+    "version":  0,
+    "selections":  [
+
+                   ]
+}

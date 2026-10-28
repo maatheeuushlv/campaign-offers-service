@@ -1,0 +1,16 @@
+# kind cluster used by the lab. One node is enough: the apps run as several PODS, which is what the problem needs.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: reports-lab
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080   # reports-gateway  (endpoints 1 and 4)  -> http://localhost:8080
+        hostPort: 8080
+        protocol: TCP
+      - containerPort: 30081   # reports-service  (endpoint 2)         -> http://localhost:8081
+        hostPort: 8081
+        protocol: TCP
+      - containerPort: 30082   # campaign-offers  (endpoint 3)         -> http://localhost:8082
+        hostPort: 8082
+        protocol: TCP

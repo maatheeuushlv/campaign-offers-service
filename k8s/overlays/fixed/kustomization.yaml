@@ -1,0 +1,19 @@
+# FIXED scenario: one conditional Mongo update + cache invalidation after commit through a versioned cache key.
+# The lock is available (FIX_LOCK) but off: with the atomic update it is not needed for correctness.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+configMapGenerator:
+  - name: lab-config
+    behavior: merge
+    options:
+      disableNameSuffixHash: true
+    literals:
+      - SCENARIO=fixed
+      - FIX_ATOMIC_WRITE=true
+      - FIX_INVALIDATE_AFTER_COMMIT=true
+      - FIX_VERSIONED_CACHE=true
+      - FIX_LOCK=false

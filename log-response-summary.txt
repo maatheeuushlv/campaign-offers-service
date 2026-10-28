@@ -1,0 +1,105 @@
+Eu executei os comandos e esse foi resultado abaixo:
+ .\scripts\up.ps1                    # cluster + images + PROBLEM scenario + seed (first run: several minutes)
+.\scripts\demo.ps1                  # one customer, step by step
+.\scripts\run-test.ps1              # the click storm: expect 
+
+PS C:\Users\mathe\_dev\reports-lab> .\scripts\demo.ps1
+Customer user002  CNPJ 10000001000190 10000002000134 10000003000189 10000004000123 10000005000178 10000006000112 10000007000167 10000008000101 10000009000156 10000010000180 10000011000125 10000012000170 10000013000114 10000014000169 10000015000103 10000016000158 10000017000100 10000018000147 10000019000191 10000020000116 10000021000160 10000022000105 10000023000150 10000024000102 10000025000149 10000026000193 10000027000138 10000028000182 10000029000127 10000030000151 10000031000104 10000032000140 10000033000195 10000034000130 10000035000184 10000036000129 10000037000173 10000038000118 10000039000162 10000040000197 10000041000131 10000042000186 10000043000120 10000044000175 10000045000110 10000046000164 10000047000109 10000048000153 10000049000106 10000050000122
+
+--- ENDPOINT 2  GET /reports/logon/{logon}/document/{cnpj}  (direct on :8081, no cache: always Mongo)
+{
+    "reports":  [
+
+                ]
+}
+
+--- ENDPOINT 3  GET /campaign-offers/logon/{logon}/document/{cnpj}  (direct on :8082, cached 12h in Redis, cart-aware)
+{
+    "recommendations":  [
+
+                        ]
+}
+
+--- ENDPOINT 1  GET /reports/logon/{logon}/preferences  (cart 1 = recommendations, cart 2 = features)
+{
+    "reports":  [
+
+                ]
+}
+POST insert -> 204  X-Reason=OFFER_NOT_ELIGIBLE  pod=reports-gateway-7554bfd484-2sgpw
+
+--- ENDPOINT 1 after insert: the feature moved from recommendations to features (preSelected=true)
+{
+    "reports":  [
+
+                ]
+}
+POST insert -> 204  X-Reason=OFFER_NOT_ELIGIBLE  pod=reports-gateway-7554bfd484-2sgpw
+POST remove -> 204  X-Reason=NOT_IN_CART  pod=reports-gateway-7554bfd484-2sgpw
+
+--- ENDPOINT 1 after remove: back to recommendations (still valid today)
+{
+    "reports":  [
+
+                ]
+}
+
+Mongo truth (bypasses every cache):
+{
+    "version":  0,
+    "selections":  [
+
+                   ]
+}
+PS C:\Users\mathe\_dev\reports-lab> .\scripts\run-test.ps1
+Switched to context "kind-reports-lab".
+==> Starting the tester Job
+job.batch/lab-tester created
+==> Waiting for the Job (roughly 34s)...
+
+=== lab-tester ===
+gateway=http://reports-gateway:8080 customers=20 rounds=3 stagger=100ms poll=40ms settle=1500ms sequence=insert,remove,insert
+gateway flags: {"flags":"atomicWrite=false invalidateAfterCommit=false versionedCache=false lock=false simWriteDelayMs=300 simLoadDelayMs=60 cacheTtl=PT12H"}
+
+--- FAILED round of user001 [DUPLICATE] ---
+  + 290ms  POST remove -> 204 NOT_IN_CART        pod=reports-gateway-7554bfd484-ghrzk
+  + 349ms  GET  cart  -> 200 shows=ELIGIBLE     offers-cache=HIT  pod=reports-gateway-7554bfd484-ghrzk
+  + 463ms  POST insert -> 200 APPLIED            pod=reports-gateway-7554bfd484-2sgpw
+  + 684ms  GET  cart  -> 200 shows=IN_CART      offers-cache=MISS pod=reports-gateway-7554bfd484-ghrzk
+  + 861ms  POST insert -> 200 APPLIED            pod=reports-gateway-7554bfd484-ghrzk
+  +1003ms  GET  cart  -> 200 shows=IN_CART      offers-cache=HIT  pod=reports-gateway-7554bfd484-2sgpw
+  +2572ms  SETTLED  intent=IN_CART  mongo=IN_CART(x2)  endpoint1=IN_CART
+  +3020ms  FLIP remove -> 200 APPLIED            mongo=NOT_IN_CART endpoint1=ELIGIBLE
+
+--- FAILED round of user001 [STALE_VIEW] ---
+  + 305ms  POST remove -> 204 NOT_IN_CART        pod=reports-gateway-7554bfd484-ghrzk
+  + 335ms  GET  cart  -> 200 shows=ELIGIBLE     offers-cache=HIT  pod=reports-gateway-7554bfd484-ghrzk
+  + 466ms  POST insert -> 200 APPLIED            pod=reports-gateway-7554bfd484-ghrzk
+  + 486ms  GET  cart  -> 200 shows=BOTH_CARTS   offers-cache=HIT  pod=reports-gateway-7554bfd484-ghrzk
+  + 661ms  POST insert -> 200 APPLIED            pod=reports-gateway-7554bfd484-2sgpw
+  + 723ms  GET  cart  -> 200 shows=BOTH_CARTS   offers-cache=HIT  pod=reports-gateway-7554bfd484-ghrzk
+  +2307ms  SETTLED  intent=IN_CART  mongo=IN_CART(x1)  endpoint1=BOTH_CARTS
+  +2736ms  FLIP remove -> 200 APPLIED            mongo=NOT_IN_CART endpoint1=ELIGIBLE
+
+--- FAILED round of user002 [STALE_VIEW] ---
+  + 298ms  POST remove -> 204 NOT_IN_CART        pod=reports-gateway-7554bfd484-ghrzk
+  + 369ms  GET  cart  -> 200 shows=ELIGIBLE     offers-cache=HIT  pod=reports-gateway-7554bfd484-2sgpw
+  + 471ms  POST insert -> 200 APPLIED            pod=reports-gateway-7554bfd484-ghrzk
+  + 573ms  GET  cart  -> 200 shows=BOTH_CARTS   offers-cache=HIT  pod=reports-gateway-7554bfd484-ghrzk
+  + 673ms  POST insert -> 200 APPLIED            pod=reports-gateway-7554bfd484-2sgpw
+  + 696ms  GET  cart  -> 200 shows=BOTH_CARTS   offers-cache=HIT  pod=reports-gateway-7554bfd484-ghrzk
+  +2281ms  SETTLED  intent=IN_CART  mongo=IN_CART(x1)  endpoint1=BOTH_CARTS
+  +2760ms  FLIP remove -> 200 APPLIED            mongo=NOT_IN_CART endpoint1=ELIGIBLE
+
+=================== SUMMARY ===================
+rounds=60  consistent=14  broken=46  errors=0
+  LOST_UPDATE : Mongo does not hold what the customer clicked last
+  STALE_VIEW  : endpoint 1 disagrees with Mongo: the item is in both carts or in neither (the 12h endpoint-3 cache is wrong)
+  STUCK       : the customer cannot add/remove the item any more (POST answers 204 or has no effect)
+  DUPLICATE   : the same feature was inserted twice in Mongo
+  DUPLICATE    2 round(s)
+  STALE_VIEW   44 round(s)
+POSTs served per gateway pod: {reports-gateway-7554bfd484-2sgpw=95, reports-gateway-7554bfd484-ghrzk=85}
+VERDICT: inconsistencies observed (see above)
+
+Quero que você crie uma automação cypress para que eu consiga visualizar o cenário problem e fixed, e faça um resumo dos logs se o comportamento esperado para problem aconteceu

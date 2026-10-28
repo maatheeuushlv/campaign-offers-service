@@ -1,0 +1,18 @@
+# PROBLEM scenario: read-modify-write, validation against the cached view, invalidate BEFORE the write.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+configMapGenerator:
+  - name: lab-config
+    behavior: merge
+    options:
+      disableNameSuffixHash: true
+    literals:
+      - SCENARIO=problem
+      - FIX_ATOMIC_WRITE=false
+      - FIX_INVALIDATE_AFTER_COMMIT=false
+      - FIX_VERSIONED_CACHE=false
+      - FIX_LOCK=false

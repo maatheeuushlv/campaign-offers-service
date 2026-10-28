@@ -1,0 +1,8 @@
+**/target
+.git
+.idea
+*.iml
+scripts
+docs
+k8s
+README.md
